@@ -762,7 +762,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 			return
 		}
 
-		dispatch1 := time.Since(baseTime)
+		//dispatch1 := time.Since(baseTime)
 		startTime := time.Now()
 		if err = cc.dispatch(ctx, data); err != nil {
 			if terror.ErrorEqual(err, io.EOF) {
@@ -791,8 +791,9 @@ func (cc *clientConn) Run(ctx context.Context) {
 			terror.Log(err1)
 		}
 		cc.addMetrics(data[0], startTime, err)
-		dispatch2 := time.Since(baseTime)
-		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", dispatch1), zap.Duration("dispatch2", dispatch2))
+		//dispatch2 := time.Since(baseTime)
+		//logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", dispatch1), zap.Duration("dispatch2", dispatch2), zap.Int("cmd", int(data[0])))
+		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", time.Since(startTime)), zap.Int("cmd", int(data[0])))
 		cc.pkt.sequence = 0
 	}
 }
@@ -942,7 +943,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	}
 
 	dataStr := string(hack.String(data))
-	logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
+	//logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
 	switch cmd {
 	case mysql.ComPing, mysql.ComStmtClose, mysql.ComStmtSendLongData, mysql.ComStmtReset,
 		mysql.ComSetOption, mysql.ComChangeUser:
