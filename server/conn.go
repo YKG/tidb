@@ -726,6 +726,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 	// the status to special values, for example: kill or graceful shutdown.
 	// The client connection would detect the events when it fails to change status
 	// by CAS operation, it would then take some actions accordingly.
+	baseTime := time.Now()
 	for {
 		if !atomic.CompareAndSwapInt32(&cc.status, connStatusDispatching, connStatusReading) {
 			return
@@ -761,6 +762,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 			return
 		}
 
+		dispatch1 := time.Since(baseTime)
 		startTime := time.Now()
 		if err = cc.dispatch(ctx, data); err != nil {
 			if terror.ErrorEqual(err, io.EOF) {
@@ -789,6 +791,8 @@ func (cc *clientConn) Run(ctx context.Context) {
 			terror.Log(err1)
 		}
 		cc.addMetrics(data[0], startTime, err)
+		dispatch2 := time.Since(baseTime)
+		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", dispatch1), zap.Duration("dispatch2", dispatch2))
 		cc.pkt.sequence = 0
 	}
 }
