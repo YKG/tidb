@@ -942,6 +942,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	}
 
 	dataStr := string(hack.String(data))
+	logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
 	switch cmd {
 	case mysql.ComPing, mysql.ComStmtClose, mysql.ComStmtSendLongData, mysql.ComStmtReset,
 		mysql.ComSetOption, mysql.ComChangeUser:
