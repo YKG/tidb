@@ -270,6 +270,19 @@ func (a *ExecStmt) RebuildPlan(ctx context.Context) (int64, error) {
 // like the INSERT, UPDATE statements, it executes in this function, if the Executor returns
 // result, execution is done after this function returns, in the returned sqlexec.RecordSet Next method.
 func (a *ExecStmt) Exec(ctx context.Context) (_ sqlexec.RecordSet, err error) {
+	var d1, d2, d3, d4, d5 time.Duration
+	t := time.Now()
+	defer func() {
+		d5 = time.Since(t)
+		logutil.BgLogger().Error("Exec",
+			zap.Uint64("connectionID", uint64(0)),
+			zap.Int64("d1", d1.Microseconds()),
+			zap.Int64("d2", d2.Microseconds()),
+			zap.Int64("d3", d3.Microseconds()),
+			zap.Int64("d4", d4.Microseconds()),
+			zap.Int64("d5", d5.Microseconds()),
+		)
+	}()
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -311,16 +324,17 @@ func (a *ExecStmt) Exec(ctx context.Context) (_ sqlexec.RecordSet, err error) {
 	if sctx.GetSessionVars().StmtCtx.HasMemQuotaHint {
 		sctx.GetSessionVars().StmtCtx.MemTracker.SetBytesLimit(sctx.GetSessionVars().StmtCtx.MemQuotaQuery)
 	}
-
+	d1 = time.Since(t)
 	e, err := a.buildExecutor()
 	if err != nil {
 		return nil, err
 	}
-
+	d2 = time.Since(t)
 	if err = e.Open(ctx); err != nil {
 		terror.Call(e.Close)
 		return nil, err
 	}
+	d3 = time.Since(t)
 
 	cmd32 := atomic.LoadUint32(&sctx.GetSessionVars().CommandValue)
 	cmd := byte(cmd32)
@@ -348,7 +362,7 @@ func (a *ExecStmt) Exec(ctx context.Context) (_ sqlexec.RecordSet, err error) {
 	if isPessimistic && a.isSelectForUpdate {
 		return a.handlePessimisticSelectForUpdate(ctx, e)
 	}
-
+	d4 = time.Since(t)
 	if handled, result, err := a.handleNoDelay(ctx, e, isPessimistic); handled {
 		return result, err
 	}
