@@ -899,24 +899,27 @@ func (cc *clientConn) addMetrics(cmd byte, startTime time.Time, err error) {
 // The most frequently used command is ComQuery.
 func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	var d1, d2, d3, d4, d5 time.Duration
+	var cmd byte
 	t := time.Now()
 	defer func() {
 		// reset killed for each request
 		atomic.StoreUint32(&cc.ctx.GetSessionVars().Killed, 0)
 		d5 = time.Since(t)
-		logutil.BgLogger().Error("dispatch",
-			zap.Uint64("connectionID", uint64(cc.connectionID)),
-			zap.Int64("d1", d1.Microseconds()),
-			zap.Int64("d2", d2.Microseconds()),
-			zap.Int64("d3", d3.Microseconds()),
-			zap.Int64("d4", d4.Microseconds()),
-			zap.Int64("d5", d5.Microseconds()),
-		)
+		if cmd == 23 {
+			logutil.BgLogger().Error("dispatch",
+				zap.Uint64("connectionID", uint64(cc.connectionID)),
+				zap.Int64("d1", d1.Microseconds()),
+				zap.Int64("d2", d2.Microseconds()),
+				zap.Int64("d3", d3.Microseconds()),
+				zap.Int64("d4", d4.Microseconds()),
+				zap.Int64("d5", d5.Microseconds()),
+			)
+		}
 	}()
 	span := opentracing.StartSpan("server.dispatch")
 
 	cc.lastPacket = data
-	cmd := data[0]
+	cmd = data[0]
 	data = data[1:]
 	d1 = time.Since(t)
 	if variable.EnablePProfSQLCPU.Load() {
