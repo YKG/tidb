@@ -934,9 +934,8 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 			defer task.End()
 		}
 	}
-	d1 = time.Since(t)
 	token := cc.server.getToken()
-	d2 = time.Since(t)
+	d1 = time.Since(t)
 	defer func() {
 		// if handleChangeUser failed, cc.ctx may be nil
 		if cc.ctx != nil {
@@ -946,14 +945,15 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 		cc.server.releaseToken(token)
 		span.Finish()
 	}()
-
+	d2 = time.Since(t)
 	vars := cc.ctx.GetSessionVars()
 	// reset killed for each request
 	atomic.StoreUint32(&vars.Killed, 0)
+	d3 = time.Since(t)
 	if cmd < mysql.ComEnd {
 		cc.ctx.SetCommandValue(cmd)
 	}
-	d3 = time.Since(t)
+	d4 = time.Since(t)
 	dataStr := string(hack.String(data))
 	//logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
 	switch cmd {
@@ -963,7 +963,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	case mysql.ComInitDB:
 		cc.ctx.SetProcessInfo("use "+dataStr, t, cmd, 0)
 	}
-	d4 = time.Since(t)
+
 	switch cmd {
 	case mysql.ComSleep:
 		// TODO: According to mysql document, this command is supposed to be used only internally.
