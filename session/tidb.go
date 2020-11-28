@@ -283,7 +283,9 @@ func runStmt(ctx context.Context, sctx sessionctx.Context, s sqlexec.Statement) 
 	if err != nil {
 		return nil, err
 	}
+	d1 := time.Since(sctx.GetSessionVars().StartTime)
 	rs, err = s.Exec(ctx)
+	d2 := time.Since(sctx.GetSessionVars().StartTime)
 	sessVars.TxnCtx.StatementCount++
 	if !s.IsReadOnly(sessVars) {
 		// All the history should be added here.
@@ -312,12 +314,22 @@ func runStmt(ctx context.Context, sctx sessionctx.Context, s sqlexec.Statement) 
 			se:        se,
 		}, err
 	}
-
+	d3 := time.Since(sctx.GetSessionVars().StartTime)
 	err = finishStmt(ctx, se, err, s)
+	d4 := time.Since(sctx.GetSessionVars().StartTime)
 
 	// If it is not a select statement, we record its slow log here,
 	// then it could include the transaction commit time.
 	s.(*executor.ExecStmt).FinishExecuteStmt(origTxnCtx.StartTS, err == nil, false)
+	d5 := time.Since(sctx.GetSessionVars().StartTime)
+	logutil.BgLogger().Error("runStmt",
+		zap.Uint64("connectionID", sctx.GetSessionVars().ConnectionID),
+		zap.Int64("d1", d1.Microseconds()),
+		zap.Int64("d2", d2.Microseconds()),
+		zap.Int64("d3", d3.Microseconds()),
+		zap.Int64("d4", d4.Microseconds()),
+		zap.Int64("d5", d5.Microseconds()),
+		)
 	return rs, err
 }
 
