@@ -896,18 +896,19 @@ func (cc *clientConn) addMetrics(cmd byte, startTime time.Time, err error) {
 // It also gets a token from server which is used to limit the concurrently handling clients.
 // The most frequently used command is ComQuery.
 func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
-	var d1, d2, d3, d4 time.Duration
+	var d1, d2, d3, d4, d5 time.Duration
 	t := time.Now()
 	defer func() {
 		// reset killed for each request
 		atomic.StoreUint32(&cc.ctx.GetSessionVars().Killed, 0)
-		d4 = time.Since(t)
+		d5 = time.Since(t)
 		logutil.BgLogger().Error("dispatch",
 			zap.Uint64("connectionID", uint64(cc.connectionID)),
 			zap.Int64("d1", d1.Microseconds()),
 			zap.Int64("d2", d2.Microseconds()),
 			zap.Int64("d3", d3.Microseconds()),
 			zap.Int64("d4", d4.Microseconds()),
+			zap.Int64("d5", d5.Microseconds()),
 		)
 	}()
 	span := opentracing.StartSpan("server.dispatch")
@@ -952,7 +953,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	if cmd < mysql.ComEnd {
 		cc.ctx.SetCommandValue(cmd)
 	}
-
+	d3 = time.Since(t)
 	dataStr := string(hack.String(data))
 	//logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
 	switch cmd {
@@ -962,7 +963,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	case mysql.ComInitDB:
 		cc.ctx.SetProcessInfo("use "+dataStr, t, cmd, 0)
 	}
-	d3 = time.Since(t)
+	d4 = time.Since(t)
 	switch cmd {
 	case mysql.ComSleep:
 		// TODO: According to mysql document, this command is supposed to be used only internally.
