@@ -227,12 +227,14 @@ func autoCommitAfterStmt(ctx context.Context, se *session, meetsErr error, sql s
 	}
 
 	if !sessVars.InTxn() {
+		start := time.Now()
 		if err := se.CommitTxn(ctx); err != nil {
 			if _, ok := sql.(*executor.ExecStmt).StmtNode.(*ast.CommitStmt); ok {
 				err = errors.Annotatef(err, "previous statement: %s", se.GetSessionVars().PrevStmt)
 			}
 			return err
 		}
+		logutil.BgLogger().Error("CommitTxn", zap.Int64("duration", time.Since(start).Microseconds()))
 		return nil
 	}
 	return nil
