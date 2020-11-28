@@ -790,10 +790,12 @@ func (cc *clientConn) Run(ctx context.Context) {
 			err1 := cc.writeError(ctx, err)
 			terror.Log(err1)
 		}
+		d1 := time.Since(startTime)
 		cc.addMetrics(data[0], startTime, err)
+		d2 := time.Since(startTime)
 		//dispatch2 := time.Since(baseTime)
 		//logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", dispatch1), zap.Duration("dispatch2", dispatch2), zap.Int("cmd", int(data[0])))
-		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Int64("duration", time.Since(startTime).Microseconds()), zap.Int("cmd", int(data[0])))
+		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Int64("d1", d1.Microseconds()), zap.Int64("duration", d2.Microseconds()), zap.Int("cmd", int(data[0])))
 		cc.pkt.sequence = 0
 	}
 }
