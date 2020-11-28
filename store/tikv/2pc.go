@@ -1300,7 +1300,7 @@ func (c *twoPhaseCommitter) execute(ctx context.Context) (err error) {
 	binlogChan := c.prewriteBinlog(ctx)
 	prewriteBo := NewBackofferWithVars(ctx, PrewriteMaxBackoff, c.txn.vars)
 	start := time.Now()
-	startTime := start
+	startTime5 := time.Now()
 	var d1, d2, d3, d4, d5 time.Duration
 	defer func() {
 		logutil.BgLogger().Error("2pc",
@@ -1313,7 +1313,7 @@ func (c *twoPhaseCommitter) execute(ctx context.Context) (err error) {
 		)
 	}()
 	err = c.prewriteMutations(prewriteBo, c.mutations)
-	d1 = time.Since(startTime)
+	d1 = time.Since(startTime5)
 	commitDetail := c.getDetail()
 	commitDetail.PrewriteTime = time.Since(start)
 	if prewriteBo.totalSleep > 0 {
@@ -1346,9 +1346,9 @@ func (c *twoPhaseCommitter) execute(ctx context.Context) (err error) {
 
 	start = time.Now()
 	logutil.Event(ctx, "start get commit ts")
-	d2 = time.Since(startTime)
+	d2 = time.Since(startTime5)
 	commitTS, err := c.store.getTimestampWithRetry(NewBackofferWithVars(ctx, tsoMaxBackoff, c.txn.vars))
-	d3 = time.Since(startTime)
+	d3 = time.Since(startTime5)
 	if err != nil {
 		logutil.Logger(ctx).Warn("2PC get commitTS failed",
 			zap.Error(err),
@@ -1398,9 +1398,9 @@ func (c *twoPhaseCommitter) execute(ctx context.Context) (err error) {
 
 	start = time.Now()
 	commitBo := NewBackofferWithVars(ctx, CommitMaxBackoff, c.txn.vars)
-	d4 = time.Since(startTime)
+	d4 = time.Since(startTime5)
 	err = c.commitMutations(commitBo, c.mutations)
-	d5 = time.Since(startTime)
+	d5 = time.Since(startTime5)
 	commitDetail.CommitTime = time.Since(start)
 	if commitBo.totalSleep > 0 {
 		atomic.AddInt64(&commitDetail.CommitBackoffTime, int64(commitBo.totalSleep)*int64(time.Millisecond))
