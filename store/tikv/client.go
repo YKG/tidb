@@ -171,7 +171,7 @@ func (a *connArray) Init(addr string, security config.Security, idleNotify *uint
 				target:        a.target,
 				conn:          conn,
 				batched:       sync.Map{},
-				idAlloc:       0,
+				idAlloc:       uint64(i + 1) * 1000000000000,
 				closed:        0,
 				tikvClientCfg: cfg.TiKVClient,
 				tikvLoad:      &a.tikvTransportLayerLoad,
