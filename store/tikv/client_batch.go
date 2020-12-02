@@ -39,8 +39,8 @@ import (
 )
 const N = 5000000
 var tikvClientStart = time.Now()
-var allReqIndex = 0
-var allRespIndex = 0
+var allReqIndex uint32 = 0
+var allRespIndex uint32 = 0
 var allReq [N] *tikvpb.BatchCommandsRequest
 var allReqTs [N] time.Duration
 var allResp [N] *tikvpb.BatchCommandsResponse
@@ -243,9 +243,10 @@ func (c *batchCommandsClient) send(request *tikvpb.BatchCommandsRequest, entries
 		c.failPendingRequests(err)
 		return
 	}
-	allReqTs[allReqIndex] = time.Since(tikvClientStart)
-	allReq[allReqIndex] = request
-	allReqIndex += 1
+	reqIndex := atomic.LoadUint32(&allReqIndex)
+	allReqTs[reqIndex] = time.Since(tikvClientStart)
+	allReq[reqIndex] = request
+	atomic.AddUint32(&allReqIndex, 1)
 	if err := c.client.Send(request); err != nil {
 		logutil.BgLogger().Info(
 			"sending batch commands meets error",
@@ -364,10 +365,10 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 			continue
 		}
 
-		responses := resp.GetResponses()
-		allReqTs[allReqIndex] = time.Since(tikvClientStart)
-		allResp[allRespIndex] = resp
-		allRespIndex += 1
+		respIndex := atomic.LoadUint32(&allRespIndex)
+		allRespTs[respIndex] = time.Since(tikvClientStart)
+		allResp[respIndex] = resp
+		atomic.AddUint32(&allRespIndex, 1)
 		for i, requestID := range resp.GetRequestIds() {
 			value, ok := c.batched.Load(requestID)
 			if !ok {
@@ -595,7 +596,7 @@ func DumpGRPC() {
 	if err != nil {
 		return
 	}
-	i := 0
+	var i uint32 = 0
 	for i < allRespIndex {
 		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
 		for j, reqId := range allResp[i].RequestIds {
