@@ -578,6 +578,7 @@ func (c *batchCommandsClient) initBatchClient() error {
 }
 
 func (a *batchConn) Close() {
+	dumpTrace()
 	// Close all batchRecvLoop.
 	for _, c := range a.batchCommandsClients {
 		// After connections are closed, `batchRecvLoop`s will check the flag.
@@ -587,35 +588,34 @@ func (a *batchConn) Close() {
 	// calling SendRequest and writing batchCommandsCh, if we close it here the
 	// writing goroutine will panic.
 	close(a.closed)
-	dumpTrace()
 }
 
 func dumpTrace()  {
-	f, err := os.Create("grpc-tidb-req.txt")
-	if err != nil {
-		return
-	}
-
-	var i = 0
-	for i < allReqIndex {
-		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
-		for j, reqId := range allReq[i].RequestIds {
-			req := allReq[i].Requests[j]
-			_, _ = f.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, req.Cmd))
-		}
-		i++
-	}
-
 	f2, err := os.Create("grpc-tidb-resp.txt")
 	if err != nil {
 		return
 	}
-	i = 0
+	i := 0
 	for i < allRespIndex {
 		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
 		for j, reqId := range allResp[i].RequestIds {
 			resp := allResp[i].Responses[j]
 			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		}
+		i++
+	}
+
+	f, err := os.Create("grpc-tidb-req.txt")
+	if err != nil {
+		return
+	}
+
+	i = 0
+	for i < allReqIndex {
+		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
+		for j, reqId := range allReq[i].RequestIds {
+			req := allReq[i].Requests[j]
+			_, _ = f.WriteString(fmt.Sprintf("%d, %d, %#v\n", reqId, ts, req.Cmd))
 		}
 		i++
 	}

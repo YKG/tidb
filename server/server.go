@@ -556,7 +556,7 @@ func (s *Server) KillAllConnections() {
 	}
 }
 
-var gracefulCloseConnectionsTimeout = 15 * time.Second
+var gracefulCloseConnectionsTimeout = 180 * time.Second
 
 // TryGracefulDown will try to gracefully close all connection first with timeout. if timeout, will close all connection directly.
 func (s *Server) TryGracefulDown() {
