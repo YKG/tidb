@@ -597,13 +597,16 @@ func DumpGRPC() {
 	if err != nil {
 		return
 	}
+	respCount := atomic.LoadUint32(&allRespIndex)
+	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
 	var i uint32 = 0
 	for i < allRespIndex {
 		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
-		for j, reqId := range allResp[i].RequestIds {
-			resp := allResp[i].Responses[j]
-			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
-		}
+		_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", ts, allResp[i]))
+		//for j, reqId := range allResp[i].RequestIds {
+		//	resp := allResp[i].Responses[j]
+		//	_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		//}
 		i++
 	}
 
