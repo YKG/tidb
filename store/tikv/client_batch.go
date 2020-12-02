@@ -625,10 +625,10 @@ func DumpGRPC() {
 		if allResp[i] == nil || allResp[i].RequestIds == nil {
 			_, _ = f2.WriteString(fmt.Sprintf("ERROR NIL: %d %v\n", i, ts))
 		}
-		//for j, reqId := range allResp[i].RequestIds {
-		//	resp := allResp[i].Responses[j]
-		//	_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
-		//}
+		for j, reqId := range allResp[i].GetRequestIds() {
+			resp := allResp[i].Responses[j]
+			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		}
 		i++
 	}
 }
