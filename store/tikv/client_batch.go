@@ -41,7 +41,7 @@ const N = 5000000
 var tikvClientStart = time.Now()
 var allReqIndex uint32 = 0
 var allRespIndex uint32 = 0
-var allReq [N] *tikvpb.BatchCommandsRequest
+var allReq [N] uint64
 var allReqTs [N] time.Duration
 var allResp [N] *tikvpb.BatchCommandsResponse
 var allRespTs [N] time.Duration
@@ -243,10 +243,6 @@ func (c *batchCommandsClient) send(request *tikvpb.BatchCommandsRequest, entries
 		c.failPendingRequests(err)
 		return
 	}
-	reqIndex := atomic.LoadUint32(&allReqIndex)
-	allReqTs[reqIndex] = time.Since(tikvClientStart)
-	allReq[reqIndex] = request
-	atomic.AddUint32(&allReqIndex, 1)
 	if err := c.client.Send(request); err != nil {
 		logutil.BgLogger().Info(
 			"sending batch commands meets error",
@@ -547,9 +543,15 @@ func (a *batchConn) getClientAndSend(entries []*batchCommandsEntry, requests []*
 	defer cli.unlockForSend()
 
 	maxBatchID := atomic.AddUint64(&cli.idAlloc, uint64(len(requests)))
+	ts := time.Since(tikvClientStart)
 	for i := 0; i < len(requests); i++ {
 		requestID := uint64(i) + maxBatchID - uint64(len(requests))
 		requestIDs = append(requestIDs, requestID)
+
+		reqIndex := atomic.LoadUint32(&allReqIndex)
+		allReqTs[reqIndex] = ts
+		allReq[reqIndex] = requestID
+		atomic.AddUint32(&allReqIndex, 1)
 	}
 	req := &tikvpb.BatchCommandsRequest{
 		Requests:   requests,
@@ -606,9 +608,7 @@ func DumpGRPC() {
 	for i < reqCount {
 		//_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
 		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
-		for j, reqId := range allReq[i].RequestIds {
-			_, _ = f.WriteString(fmt.Sprintf("%d, %d, %d, %d\n", i, j, reqId, ts))
-		}
+		_, _ = f.WriteString(fmt.Sprintf("%d, %d, %d\n", i, allReq[i], ts))
 		i++
 	}
 
@@ -620,14 +620,14 @@ func DumpGRPC() {
 	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
 	i = 0
 	for i < respCount {
-		_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
+		//_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
 		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
 		if allResp[i] == nil || allResp[i].RequestIds == nil {
 			_, _ = f2.WriteString(fmt.Sprintf("ERROR NIL: %d %v\n", i, ts))
 		}
 		for j, reqId := range allResp[i].GetRequestIds() {
 			resp := allResp[i].Responses[j]
-			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %d, %T\n", i, reqId, ts, resp.Cmd))
 		}
 		i++
 	}
