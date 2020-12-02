@@ -17,8 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/pingcap/tidb/util/logutil"
-	"go.uber.org/zap"
 	"sync/atomic"
 	"time"
 
@@ -75,9 +73,7 @@ func (ts *TiDBStatement) ID() int {
 
 // Execute implements PreparedStatement Execute method.
 func (ts *TiDBStatement) Execute(ctx context.Context, args []types.Datum) (rs ResultSet, err error) {
-	start := time.Now()
 	tidbRecordset, err := ts.ctx.session.ExecutePreparedStmt(ctx, ts.id, args)
-	logutil.BgLogger().Error("ExecutePreparedStmt", zap.Int64("duration", time.Since(start).Microseconds()))
 	if err != nil {
 		return nil, err
 	}

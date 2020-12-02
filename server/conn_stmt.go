@@ -38,8 +38,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/pingcap/tidb/util/logutil"
-	"go.uber.org/zap"
 	"math"
 	"runtime/trace"
 	"strconv"
@@ -113,21 +111,6 @@ func (cc *clientConn) handleStmtPrepare(ctx context.Context, sql string) error {
 }
 
 func (cc *clientConn) handleStmtExecute(ctx context.Context, data []byte) (err error) {
-	start := time.Now()
-	var d1, d2, d3, d4, d5 time.Duration
-	defer func() {
-		d4 = time.Since(start)
-		d5 = time.Since(start)
-		logutil.BgLogger().Error("handleStmtExecute",
-			zap.Uint64("connectionId", uint64(cc.connectionID)),
-			zap.Int64("d1", d1.Microseconds()),
-			zap.Int64("d2", d2.Microseconds()),
-			zap.Int64("d3", d3.Microseconds()),
-			zap.Int64("d4", d4.Microseconds()),
-			zap.Int64("d5", d5.Microseconds()),
-		)
-	}()
-
 	defer trace.StartRegion(ctx, "HandleStmtExecute").End()
 	if len(data) < 9 {
 		return mysql.ErrMalformPacket
@@ -135,7 +118,7 @@ func (cc *clientConn) handleStmtExecute(ctx context.Context, data []byte) (err e
 	pos := 0
 	stmtID := binary.LittleEndian.Uint32(data[0:4])
 	pos += 4
-	d1 = time.Since(start)
+
 	stmt := cc.ctx.GetStatement(int(stmtID))
 	if stmt == nil {
 		return mysql.NewErr(mysql.ErrUnknownStmtHandler,
@@ -202,10 +185,8 @@ func (cc *clientConn) handleStmtExecute(ctx context.Context, data []byte) (err e
 			return errors.Annotate(err, cc.preparedStmt2String(stmtID))
 		}
 	}
-	d2 = time.Since(start)
 	ctx = context.WithValue(ctx, execdetails.StmtExecDetailKey, &execdetails.StmtExecDetails{})
 	rs, err := stmt.Execute(ctx, args)
-	d3 = time.Since(start)
 	if err != nil {
 		return errors.Annotate(err, cc.preparedStmt2String(stmtID))
 	}

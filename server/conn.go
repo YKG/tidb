@@ -726,7 +726,6 @@ func (cc *clientConn) Run(ctx context.Context) {
 	// the status to special values, for example: kill or graceful shutdown.
 	// The client connection would detect the events when it fails to change status
 	// by CAS operation, it would then take some actions accordingly.
-	//baseTime := time.Now()
 	for {
 		if !atomic.CompareAndSwapInt32(&cc.status, connStatusDispatching, connStatusReading) {
 			return
@@ -762,7 +761,6 @@ func (cc *clientConn) Run(ctx context.Context) {
 			return
 		}
 
-		//dispatch1 := time.Since(baseTime)
 		startTime := time.Now()
 		if err = cc.dispatch(ctx, data); err != nil {
 			if terror.ErrorEqual(err, io.EOF) {
@@ -790,12 +788,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 			err1 := cc.writeError(ctx, err)
 			terror.Log(err1)
 		}
-		d1 := time.Since(startTime)
 		cc.addMetrics(data[0], startTime, err)
-		d2 := time.Since(startTime)
-		//dispatch2 := time.Since(baseTime)
-		//logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Duration("dispatch1", dispatch1), zap.Duration("dispatch2", dispatch2), zap.Int("cmd", int(data[0])))
-		logutil.BgLogger().Error("trace", zap.Uint32("connectionID", cc.connectionID), zap.Int64("d1", d1.Microseconds()), zap.Int64("duration", d2.Microseconds()), zap.Int("cmd", int(data[0])))
 		cc.pkt.sequence = 0
 	}
 }
@@ -898,30 +891,16 @@ func (cc *clientConn) addMetrics(cmd byte, startTime time.Time, err error) {
 // It also gets a token from server which is used to limit the concurrently handling clients.
 // The most frequently used command is ComQuery.
 func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
-	var d1, d2, d3, d4, d5 time.Duration
-	var cmd byte
-	t := time.Now()
 	defer func() {
 		// reset killed for each request
 		atomic.StoreUint32(&cc.ctx.GetSessionVars().Killed, 0)
-		d5 = time.Since(t)
-		if cmd == 23 {
-			logutil.BgLogger().Error("dispatch",
-				zap.Uint64("connectionID", uint64(cc.connectionID)),
-				zap.Int64("d1", d1.Microseconds()),
-				zap.Int64("d2", d2.Microseconds()),
-				zap.Int64("d3", d3.Microseconds()),
-				zap.Int64("d4", d4.Microseconds()),
-				zap.Int64("d5", d5.Microseconds()),
-			)
-		}
 	}()
 	span := opentracing.StartSpan("server.dispatch")
 
+	t := time.Now()
 	cc.lastPacket = data
-	cmd = data[0]
+	cmd := data[0]
 	data = data[1:]
-	d1 = time.Since(t)
 	if variable.EnablePProfSQLCPU.Load() {
 		label := getLastStmtInConn{cc}.PProfLabel()
 		if len(label) > 0 {
@@ -940,9 +919,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 			defer task.End()
 		}
 	}
-	d2 = time.Since(t)
 	token := cc.server.getToken()
-	d3 = time.Since(t)
 	defer func() {
 		// if handleChangeUser failed, cc.ctx may be nil
 		if cc.ctx != nil {
@@ -952,15 +929,15 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 		cc.server.releaseToken(token)
 		span.Finish()
 	}()
+
 	vars := cc.ctx.GetSessionVars()
 	// reset killed for each request
 	atomic.StoreUint32(&vars.Killed, 0)
 	if cmd < mysql.ComEnd {
 		cc.ctx.SetCommandValue(cmd)
 	}
-	d4 = time.Since(t)
+
 	dataStr := string(hack.String(data))
-	//logutil.BgLogger().Error("dispatch", zap.Uint32("connectionID", cc.connectionID), zap.String("dataStr", dataStr), zap.Int("cmd", int(cmd)))
 	switch cmd {
 	case mysql.ComPing, mysql.ComStmtClose, mysql.ComStmtSendLongData, mysql.ComStmtReset,
 		mysql.ComSetOption, mysql.ComChangeUser:
