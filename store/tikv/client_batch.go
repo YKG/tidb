@@ -601,12 +601,12 @@ func DumpGRPC() {
 	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
 	var i uint32 = 0
 	for i < respCount {
-		_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
-		//ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
-		//for j, reqId := range allResp[i].RequestIds {
-		//	resp := allResp[i].Responses[j]
-		//	_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
-		//}
+		//_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
+		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
+		for j, reqId := range allResp[i].RequestIds {
+			resp := allResp[i].Responses[j]
+			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		}
 		i++
 	}
 
@@ -617,13 +617,13 @@ func DumpGRPC() {
 
 	i = 0
 	reqCount := atomic.LoadUint32(&allReqIndex)
+	_, _ = f2.WriteString(fmt.Sprintf("reqCount: %v\n", reqCount))
 	for i < reqCount {
-		_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
-		//ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
-		//for j, reqId := range allReq[i].RequestIds {
-		//	req := allReq[i].Requests[j]
-		//	_, _ = f.WriteString(fmt.Sprintf("%d, %d, %#v\n", reqId, ts, req.Cmd))
-		//}
+		//_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
+		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
+		for j, reqId := range allReq[i].RequestIds {
+			_, _ = f.WriteString(fmt.Sprintf("%d, %d\n", reqId, ts))
+		}
 		i++
 	}
 }
