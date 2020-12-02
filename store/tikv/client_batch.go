@@ -606,8 +606,8 @@ func DumpGRPC() {
 	for i < reqCount {
 		//_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
 		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
-		for _, reqId := range allReq[i].RequestIds {
-			_, _ = f.WriteString(fmt.Sprintf("%d, %d\n", reqId, ts))
+		for j, reqId := range allReq[i].RequestIds {
+			_, _ = f.WriteString(fmt.Sprintf("%d, %d, %d, %d\n", i, j, reqId, ts))
 		}
 		i++
 	}
@@ -620,12 +620,15 @@ func DumpGRPC() {
 	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
 	i = 0
 	for i < respCount {
-		//_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
+		_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
 		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
-		for j, reqId := range allResp[i].RequestIds {
-			resp := allResp[i].Responses[j]
-			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		if allResp[i] == nil || allResp[i].RequestIds == nil {
+			_, _ = f2.WriteString(fmt.Sprintf("ERROR NIL: %d %v\n", i, ts))
 		}
+		//for j, reqId := range allResp[i].RequestIds {
+		//	resp := allResp[i].Responses[j]
+		//	_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		//}
 		i++
 	}
 }
