@@ -365,6 +365,7 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 			continue
 		}
 
+		responses := resp.GetResponses()
 		respIndex := atomic.LoadUint32(&allRespIndex)
 		allRespTs[respIndex] = time.Since(tikvClientStart)
 		allResp[respIndex] = resp
