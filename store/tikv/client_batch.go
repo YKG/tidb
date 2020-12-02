@@ -578,7 +578,6 @@ func (c *batchCommandsClient) initBatchClient() error {
 }
 
 func (a *batchConn) Close() {
-	dumpTrace()
 	// Close all batchRecvLoop.
 	for _, c := range a.batchCommandsClients {
 		// After connections are closed, `batchRecvLoop`s will check the flag.
@@ -590,7 +589,8 @@ func (a *batchConn) Close() {
 	close(a.closed)
 }
 
-func dumpTrace()  {
+func DumpGRPC() {
+	logutil.BgLogger().Error("dump trace called.")
 	f2, err := os.Create("grpc-tidb-resp.txt")
 	if err != nil {
 		return

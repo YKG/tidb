@@ -612,6 +612,7 @@ func createServer() {
 }
 
 func serverShutdown(isgraceful bool) {
+	tikv.DumpGRPC()
 	if isgraceful {
 		graceful = true
 	}
