@@ -361,11 +361,11 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 			continue
 		}
 
-		responses := resp.GetResponses()
-		respIndex := atomic.LoadUint32(&allRespIndex)
+		respIndex := atomic.AddUint32(&allRespIndex, 1) - 1
 		allRespTs[respIndex] = time.Since(tikvClientStart)
 		allResp[respIndex] = resp
-		atomic.AddUint32(&allRespIndex, 1)
+
+		responses := resp.GetResponses()
 		for i, requestID := range resp.GetRequestIds() {
 			value, ok := c.batched.Load(requestID)
 			if !ok {
@@ -543,15 +543,16 @@ func (a *batchConn) getClientAndSend(entries []*batchCommandsEntry, requests []*
 	defer cli.unlockForSend()
 
 	maxBatchID := atomic.AddUint64(&cli.idAlloc, uint64(len(requests)))
+	maxReqIndex := atomic.AddUint32(&allReqIndex, uint32(len(requests)))
 	ts := time.Since(tikvClientStart)
+	lenReq := len(requests)
 	for i := 0; i < len(requests); i++ {
 		requestID := uint64(i) + maxBatchID - uint64(len(requests))
 		requestIDs = append(requestIDs, requestID)
 
-		reqIndex := atomic.LoadUint32(&allReqIndex)
+		reqIndex := uint32(i) + maxReqIndex - uint32(lenReq)
 		allReqTs[reqIndex] = ts
 		allReq[reqIndex] = requestID
-		atomic.AddUint32(&allReqIndex, 1)
 	}
 	req := &tikvpb.BatchCommandsRequest{
 		Requests:   requests,
