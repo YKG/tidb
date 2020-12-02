@@ -16,7 +16,9 @@ package tikv
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"os"
 	"runtime/trace"
 	"sync"
 	"sync/atomic"
@@ -36,7 +38,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 const N = 5000000
-var tikv_client_start = time.Now()
+var tikvClientStart = time.Now()
 var allReqIndex = 0
 var allRespIndex = 0
 var allReq [N] *tikvpb.BatchCommandsRequest
@@ -241,7 +243,7 @@ func (c *batchCommandsClient) send(request *tikvpb.BatchCommandsRequest, entries
 		c.failPendingRequests(err)
 		return
 	}
-	allReqTs[allReqIndex] = time.Since(tikv_client_start)
+	allReqTs[allReqIndex] = time.Since(tikvClientStart)
 	allReq[allReqIndex] = request
 	allReqIndex += 1
 	if err := c.client.Send(request); err != nil {
@@ -363,7 +365,7 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 		}
 
 		responses := resp.GetResponses()
-		allReqTs[allReqIndex] = time.Since(tikv_client_start)
+		allReqTs[allReqIndex] = time.Since(tikvClientStart)
 		allResp[allRespIndex] = resp
 		allRespIndex += 1
 		for i, requestID := range resp.GetRequestIds() {
@@ -585,6 +587,38 @@ func (a *batchConn) Close() {
 	// calling SendRequest and writing batchCommandsCh, if we close it here the
 	// writing goroutine will panic.
 	close(a.closed)
+	dumpTrace()
+}
+
+func dumpTrace()  {
+	f, err := os.Create("grpc-tidb-req.txt")
+	if err != nil {
+		return
+	}
+
+	var i = 0
+	for i < allReqIndex {
+		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
+		for j, reqId := range allReq[i].RequestIds {
+			req := allReq[i].Requests[j]
+			_, _ = f.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, req.Cmd))
+		}
+		i++
+	}
+
+	f2, err := os.Create("grpc-tidb-resp.txt")
+	if err != nil {
+		return
+	}
+	i = 0
+	for i < allRespIndex {
+		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
+		for j, reqId := range allResp[i].RequestIds {
+			resp := allResp[i].Responses[j]
+			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
+		}
+		i++
+	}
 }
 
 // removeCanceledRequests removes canceled requests before sending.
