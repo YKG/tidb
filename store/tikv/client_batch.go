@@ -241,11 +241,6 @@ func (c *batchCommandsClient) send(request *tikvpb.BatchCommandsRequest, entries
 		c.failPendingRequests(err)
 		return
 	}
-	//logutil.BgLogger().Info(
-	//	"BatchGRPCSend",
-	//	zap.String("target", c.target),
-	//	zap.Uint64s("requestIDs", request.RequestIds),
-	//)
 	allReqTs[allReqIndex] = time.Since(tikv_client_start)
 	allReq[allReqIndex] = request
 	allReqIndex += 1
@@ -368,11 +363,6 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 		}
 
 		responses := resp.GetResponses()
-		//logutil.BgLogger().Info(
-		//	"BatchGRPCRecv",
-		//	zap.String("target", c.target),
-		//	zap.Uint64s("requestIDs", resp.RequestIds),
-		//)
 		allReqTs[allReqIndex] = time.Since(tikv_client_start)
 		allResp[allRespIndex] = resp
 		allRespIndex += 1
@@ -388,7 +378,7 @@ func (c *batchCommandsClient) batchRecvLoop(cfg config.TiKVClient, tikvTransport
 			if trace.IsEnabled() {
 				trace.Log(entry.ctx, "rpc", "received")
 			}
-			logutil.Eventf(entry.ctx, "receive %T response with other %d batched requests (%v) from %s", responses[i].GetCmd(), len(responses), resp.GetRequestIds(), c.target)
+			logutil.Eventf(entry.ctx, "receive %T response with other %d batched requests from %s", responses[i].GetCmd(), len(responses), c.target)
 			if atomic.LoadInt32(&entry.canceled) == 0 {
 				// Put the response only if the request is not canceled.
 				entry.res <- responses[i]
@@ -557,7 +547,6 @@ func (a *batchConn) getClientAndSend(entries []*batchCommandsEntry, requests []*
 		requestID := uint64(i) + maxBatchID - uint64(len(requests))
 		requestIDs = append(requestIDs, requestID)
 	}
-	//logutil.BgLogger().Info("getClientAndSend", zap.String("requestID", requestID), zap.String("requestID", requests[i]))
 	req := &tikvpb.BatchCommandsRequest{
 		Requests:   requests,
 		RequestIds: requestIDs,
