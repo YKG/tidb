@@ -593,22 +593,7 @@ func (a *batchConn) Close() {
 
 func DumpGRPC() {
 	logutil.BgLogger().Error("dump trace called.")
-	f2, err := os.Create("grpc-tidb-resp.txt")
-	if err != nil {
-		return
-	}
-	respCount := atomic.LoadUint32(&allRespIndex)
-	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
-	var i uint32 = 0
-	for i < respCount {
-		//_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
-		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
-		for j, reqId := range allResp[i].RequestIds {
-			resp := allResp[i].Responses[j]
-			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
-		}
-		i++
-	}
+	var i uint32
 
 	f, err := os.Create("grpc-tidb-req.txt")
 	if err != nil {
@@ -617,12 +602,29 @@ func DumpGRPC() {
 
 	i = 0
 	reqCount := atomic.LoadUint32(&allReqIndex)
-	_, _ = f2.WriteString(fmt.Sprintf("reqCount: %v\n", reqCount))
+	_, _ = f.WriteString(fmt.Sprintf("reqCount: %v\n", reqCount))
 	for i < reqCount {
 		//_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
 		ts := tikvClientStart.Add(allReqTs[i]).UnixNano()
-		for j, reqId := range allReq[i].RequestIds {
+		for _, reqId := range allReq[i].RequestIds {
 			_, _ = f.WriteString(fmt.Sprintf("%d, %d\n", reqId, ts))
+		}
+		i++
+	}
+
+	f2, err := os.Create("grpc-tidb-resp.txt")
+	if err != nil {
+		return
+	}
+	respCount := atomic.LoadUint32(&allRespIndex)
+	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
+	i = 0
+	for i < respCount {
+		//_, _ = f2.WriteString(fmt.Sprintf("%v %#v\n", i, allResp[i]))
+		ts := tikvClientStart.Add(allRespTs[i]).UnixNano()
+		for j, reqId := range allResp[i].RequestIds {
+			resp := allResp[i].Responses[j]
+			_, _ = f2.WriteString(fmt.Sprintf("%d, %d, %T\n", reqId, ts, resp.Cmd))
 		}
 		i++
 	}
