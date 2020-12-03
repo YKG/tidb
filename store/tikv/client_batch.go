@@ -603,8 +603,10 @@ func DumpGRPC() {
 		return
 	}
 
-	i = 0
 	reqCount := atomic.LoadUint32(&allReqIndex)
+	respCount := atomic.LoadUint32(&allRespIndex)
+
+	i = 0
 	_, _ = f.WriteString(fmt.Sprintf("reqCount: %v\n", reqCount))
 	for i < reqCount {
 		//_, _ = f.WriteString(fmt.Sprintf("%v %#v\n", i, allReq[i]))
@@ -617,7 +619,7 @@ func DumpGRPC() {
 	if err != nil {
 		return
 	}
-	respCount := atomic.LoadUint32(&allRespIndex)
+
 	_, _ = f2.WriteString(fmt.Sprintf("respCount: %v\n", respCount))
 	i = 0
 	for i < respCount {
