@@ -564,6 +564,12 @@ func (a *batchConn) getClientAndSend(entries []*batchCommandsEntry, requests []*
 
 func (c *batchCommandsClient) initBatchClient() error {
 	if c.client != nil {
+		tikvClient := tikvpb.NewTikvClient(c.conn)
+		streamClient, err := tikvClient.BatchCommands(context.TODO())
+		if err != nil {
+			return errors.Trace(err)
+		}
+		c.client = streamClient
 		return nil
 	}
 
